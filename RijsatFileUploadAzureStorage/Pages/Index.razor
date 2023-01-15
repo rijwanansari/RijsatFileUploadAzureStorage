@@ -1,0 +1,143 @@
+﻿@page "/"
+@using RijsatFileUploadAzureStorage.Services;
+@using RijsatFileUploadAzureStorage.Services.Dto;
+@inject IBlobStorageService blobStorageService
+
+<PageTitle>Index</PageTitle>
+@if (warninngMessage.Length > 0)
+{
+    <div class="alert alert-warning">
+        <strong>Warning!</strong> @warninngMessage.
+    </div>
+}
+
+<h4>File Upload (Azure Blob Storage)</h4>
+<div class="row">
+    <div class="col-sm-6">
+        <label>
+            <InputFile class="form-control" disabled="@fileLoading" OnChange="@OnInputFileChange" single />
+        </label>
+        @if (fileLoading)
+        {
+            <i class="fa fa-refresh"></i> <span>Loading...</span>
+        }
+    </div>
+    <div class="col-sm-2">
+        <button type="button" disabled="@fileLoading" class="btn btn-primary" @onclick="OnUploadSubmit">
+            Upload File
+        </button>
+    </div>
+</div>
+@if (displayMessage.Length > 0)
+{
+    <div class="alert alert-success">
+        <strong>Success!</strong> @displayMessage.
+    </div>
+}
+<br />
+<div class="row">
+    @if (fileUploadViewModels.Count > 0)
+    {
+        <table class="table table-responsive table-bordered">
+            <thead class="text-primary">
+                <tr>
+                    <th>File</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var attachment in fileUploadViewModels)
+                {
+
+                    <tr>
+                        <td>
+                            <a class="text-primary"><i class="fa-solid fa-paperclip"></i> @attachment.FileName</a>
+                        </td>                      
+                       
+                            <td>
+                            <span class="oi oi-delete" aria-hidden="true" @onclick="() => OnFileDeleteClick(attachment)"></span>
+                            </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+    else
+    {
+        <div class="alert alert-info">
+            <strong>No Files!</strong>
+        </div>
+    }
+</div>
+
+@code {
+    private string warninngMessage = "";
+    private string displayMessage = "";
+    private List<IBrowserFile> loadedFiles = new();
+    private long maxFileSize = 1024 * 15;
+    private int maxAllowedFiles = 3;
+    private bool fileLoading;
+    string Message = "No file(s) selected";
+    IReadOnlyList<IBrowserFile> selectedFiles;
+    private List<FileUploadViewModel> fileUploadViewModels = new();
+    private void OnInputFileChange(InputFileChangeEventArgs e)
+    {
+        selectedFiles = e.GetMultipleFiles();
+        Message = $"{selectedFiles.Count} file(s) selected";
+        this.StateHasChanged();
+    }
+    private async void OnUploadSubmit()
+    {
+        fileLoading = true;
+        foreach (var file in selectedFiles)
+        {
+            try
+            {
+                var trustedFileNameForFileStorage = file.Name;
+                var blobUrl = await blobStorageService.UploadFileToBlobAsync(trustedFileNameForFileStorage, file.ContentType, file.OpenReadStream(20971520));
+                if (blobUrl != null)
+                {
+                    FileUploadViewModel fileUploadViewModel = new FileUploadViewModel()
+                        {
+                            FileName = trustedFileNameForFileStorage,
+                            FileStorageUrl = blobUrl,
+                            ContentType = file.ContentType,
+                        };
+
+                    fileUploadViewModels.Add(fileUploadViewModel);
+                    displayMessage = trustedFileNameForFileStorage + " Uploaded!!";
+                }
+                else
+                    warninngMessage = "File Upload failed, Please try again!!";
+
+            }
+            catch (Exception ex)
+            {
+                warninngMessage = "File Upload failed, Please try again!!";
+            }
+        }
+
+        fileLoading = false;
+        this.StateHasChanged();
+    }
+
+    private async void OnFileDeleteClick(FileUploadViewModel attachment)
+    {
+        try
+        {
+            var deleteResponse = await blobStorageService.DeleteFileToBlobAsync(attachment.FileName);
+            if (deleteResponse)
+            {
+                fileUploadViewModels.Remove(attachment);
+                displayMessage = attachment.FileName + " Deleted!!";
+            }
+            
+        }
+        catch (Exception)
+        {
+            warninngMessage = "Something went wrong! Please try again.";
+        }
+        this.StateHasChanged();
+    }
+
+}
