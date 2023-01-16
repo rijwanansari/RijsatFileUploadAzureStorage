@@ -4,7 +4,7 @@
 [linkedin-url]: https://www.linkedin.com/in/rijwanansari/
 
 # Upload, Delete and View Files in Azure Blob Storage Using Blazor Apps With .NET 7 
-In this project, I have demostrated to upload, delete, and view files to Azure Blob Storage Using Blazor application with .NET 7 with complete code.
+In this project, I have demonstrated to upload, delete, and view files to Azure Blob Storage Using Blazor application with .NET 7 with complete code.
 
 ## Tech Stack :muscle:
 - .NET 7
