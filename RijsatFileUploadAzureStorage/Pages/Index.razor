@@ -2,6 +2,7 @@
 @using RijsatFileUploadAzureStorage.Services;
 @using RijsatFileUploadAzureStorage.Services.Dto;
 @inject IBlobStorageService blobStorageService
+@inject IJSRuntime jsRuntime
 
 <PageTitle>Index</PageTitle>
 @if (warninngMessage.Length > 0)
@@ -52,11 +53,12 @@
                     <tr>
                         <td>
                             <a class="text-primary"><i class="fa-solid fa-paperclip"></i> @attachment.FileName</a>
-                        </td>                      
-                       
-                            <td>
+                        </td>
+
+                        <td>
                             <span class="oi oi-delete" aria-hidden="true" @onclick="() => OnFileDeleteClick(attachment)"></span>
-                            </td>
+                            <span class="oi oi-eye" aria-hidden="true" @onclick="() => OnFileViewClick(attachment)"></span>
+                        </td>
                     </tr>
                 }
             </tbody>
@@ -131,7 +133,25 @@
                 fileUploadViewModels.Remove(attachment);
                 displayMessage = attachment.FileName + " Deleted!!";
             }
-            
+
+        }
+        catch (Exception)
+        {
+            warninngMessage = "Something went wrong! Please try again.";
+        }
+        this.StateHasChanged();
+    }
+    private async void OnFileViewClick(FileUploadViewModel attachment)
+    {
+        try
+        {
+            var sasToken = await blobStorageService.GetBlobSASTOkenByFile(attachment.FileName);
+            if (sasToken != null)
+            {
+                string fileUrl = attachment.FileStorageUrl + "?" + sasToken;
+                await jsRuntime.InvokeAsync<object>("open", fileUrl, "_blank");
+            }
+
         }
         catch (Exception)
         {
